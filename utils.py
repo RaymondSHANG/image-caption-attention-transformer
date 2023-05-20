@@ -234,10 +234,10 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     state = {'epoch': epoch,
              'epochs_since_improvement': epochs_since_improvement,
              'bleu-4': bleu4,
-             'encoder': encoder,
-             'decoder': decoder,
-             'encoder_optimizer': encoder_optimizer,
-             'decoder_optimizer': decoder_optimizer}
+             'encoder_state_dict': encoder.state_dict(),
+             'decoder_state_dict': decoder.state_dict(),
+             'encoder_optimizer_state_dict': encoder_optimizer.state_dict(),
+             'decoder_optimizer_state_dict': decoder_optimizer.state_dict()}
     save_dir = checkpoint_folder+"/"
     filename = 'checkpoint_' + model_name+'_' +\
         data_name + '.pth.tar'
@@ -247,7 +247,20 @@ def save_checkpoint(data_name, epoch, epochs_since_improvement, encoder, decoder
     if is_best:
         torch.save(state, save_dir+'BEST_' + filename)
 
-
+def optimizer_to(optim, device):
+    for param in optim.state.values():
+        # Not sure there are any global tensors in the state dict
+        if isinstance(param, torch.Tensor):
+            param.data = param.data.to(device)
+            if param._grad is not None:
+                param._grad.data = param._grad.data.to(device)
+        elif isinstance(param, dict):
+            for subparam in param.values():
+                if isinstance(subparam, torch.Tensor):
+                    subparam.data = subparam.data.to(device)
+                    if subparam._grad is not None:
+                        subparam._grad.data = subparam._grad.data.to(device)
+                        
 class AverageMeter(object):
     """
     Keeps track of most recent, average, sum, and count of a metric.
